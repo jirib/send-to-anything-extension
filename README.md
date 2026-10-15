@@ -6,34 +6,46 @@ Send, rewrite, summarize, or pipe any web text, drafts, and selections to any lo
 
 ## Architecture Overview
 
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        Page Input / Selection                          │
-│        (Active form field, highlighted text, or whole page)            │
-│  * If no field is active, interactive Target Picker lets you click it  │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                       Send-to-anything Router                          │
-│                                                                        │
-│  1. Engine Selection:                                                  │
-│     ├── 💻 Host Bridge: Spawns local CLI / binaries / scripts          │
-│     └── 🌐 Web Plugins: Integrated adapters (e.g. Gemini Web)         │
-│                                                                        │
-│  2. Workflow Mode:                                                     │
-│     ├── ➔ One-way (Fire-and-forget): Send only without waiting         │
-│     └── ⇄ Two-way: Waits for return data                               │
-│                                                                        │
-│  3. Return Data Format (When Two-way):                                 │
-│     ├── 📄 Plain: As-is raw output                                     │
-│     └── ✨ Custom Template: Wraps output (e.g. `> {{output}}`)         │
-│                                                                        │
-│  4. Output Destination (When Two-way):                                 │
-│     ├── 📝 Replace In-place (Native undo Ctrl+Z preserved)             │
-│     ├── 💬 Floating Panel (Sidecar & [ ] Fullscreen toggle)            │
-│     └── 📋 Copy to Clipboard                                           │
-└────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Input["1. Page Input / Selection"]
+        direction TB
+        I1["Active Form / Editable Field<br/>(textarea, input, contenteditable)"]
+        I2["Selected / Highlighted Text"]
+        I3["Entire Webpage Content"]
+        I4["Interactive Target Picker<br/>(Visual hover & click if none active)"]
+    end
+
+    Input --> Router{"Send-to-anything Router"}
+
+    subgraph Engines["2. Execution Engine"]
+        E1["💻 Host Bridge<br/>(Local CLI binaries, scripts, pipelines)"]
+        E2["🌐 Web Plugins<br/>(Integrated browser session, e.g. Gemini Web)"]
+    end
+
+    Router --> Engines
+
+    subgraph Modes["3. Workflow Mode"]
+        M1["➔ One-way / Fire-and-Forget<br/>(Send without waiting)"]
+        M2["⇄ Two-way<br/>(Wait for return data)"]
+    end
+
+    Engines --> Modes
+
+    subgraph Formats["4. Return Format (When Two-way)"]
+        F1["Plain Text (As-is output)"]
+        F2["Custom Template (e.g. > {{output}})"]
+    end
+
+    M2 --> Formats
+
+    subgraph Destinations["5. Output Destination"]
+        D1["📝 In-Place Replacement<br/>(Preserves Ctrl+Z undo & formatting)"]
+        D2["💬 Floating Panel<br/>(Sidecar & Fullscreen toggle)"]
+        D3["📋 Copy to Clipboard"]
+    end
+
+    Formats --> Destinations
 ```
 
 ---
