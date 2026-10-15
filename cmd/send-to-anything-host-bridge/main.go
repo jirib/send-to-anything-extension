@@ -54,6 +54,11 @@ func main() {
 		return
 	}
 
+	// Initialize privilege dropping and sandboxing across runtime OS threads
+	if err := initPrivdrop(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to initialize sandboxing: %v\n", err)
+	}
+
 	if *testCmdFlag != "" {
 		req := &Request{
 			Command:   *testCmdFlag,
@@ -69,10 +74,6 @@ func main() {
 	}
 
 	// Native Messaging Mode (invoked by Chromium over Stdio)
-	// Initialize privilege dropping across all runtime threads
-	if err := initPrivdrop(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to drop privileges: %v\n", err)
-	}
 
 	for {
 		req, err := ReadMessage(os.Stdin)

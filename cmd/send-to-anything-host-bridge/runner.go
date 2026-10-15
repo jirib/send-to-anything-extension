@@ -261,6 +261,13 @@ func ExecuteCommand(ctx context.Context, req *Request) *Response {
 		}
 	}
 
+	if cmd.Process != nil {
+		afterProcessStart(cmd.Process.Pid)
+		if !req.FireAndForget {
+			defer afterProcessDone(cmd.Process.Pid)
+		}
+	}
+
 	// Write to stdin in background if applicable
 	if shouldPipeStdin && stdinPipe != nil {
 		go func() {

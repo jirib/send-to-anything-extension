@@ -27,3 +27,9 @@ func killProcessGroup(pid int) {
 		_ = syscall.Kill(-pid, syscall.SIGKILL)
 	}
 }
+
+// afterProcessStart is a no-op hook on OpenBSD.
+func afterProcessStart(pid int) {}
+
+// afterProcessDone is a no-op hook on OpenBSD.
+func afterProcessDone(pid int) {}

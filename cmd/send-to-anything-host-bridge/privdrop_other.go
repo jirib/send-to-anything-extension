@@ -27,3 +27,9 @@ func killProcessGroup(pid int) {
 		}
 	}
 }
+
+// afterProcessStart is a no-op hook on other platforms.
+func afterProcessStart(pid int) {}
+
+// afterProcessDone is a no-op hook on other platforms.
+func afterProcessDone(pid int) {}

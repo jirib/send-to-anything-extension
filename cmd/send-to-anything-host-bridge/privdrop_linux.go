@@ -35,3 +35,9 @@ func killProcessGroup(pid int) {
 		_ = syscall.Kill(-pid, syscall.SIGKILL)
 	}
 }
+
+// afterProcessStart is a no-op hook on Linux (Pdeathsig & Setpgid handle lifecycle).
+func afterProcessStart(pid int) {}
+
+// afterProcessDone is a no-op hook on Linux.
+func afterProcessDone(pid int) {}
