@@ -3,18 +3,23 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"syscall"
 
 	"golang.org/x/sys/unix"
 )
 
-// initPrivdrop applies process-wide privilege dropping on Linux.
+// initPrivdrop applies process-wide privilege escalation prevention on Linux.
 // It sets PR_SET_NO_NEW_PRIVS across all Go runtime OS threads,
-// ensuring no child processes can ever gain privileges (via setuid/setgid or caps).
+// ensuring no child processes can ever gain privileges (via setuid/setgid or file capabilities).
 func initPrivdrop() error {
 	_, _, err := syscall.AllThreadsSyscall(syscall.SYS_PRCTL, unix.PR_SET_NO_NEW_PRIVS, 1, 0)
 	if err != 0 {
-		return err
+		if errors.Is(err, syscall.ENOTSUP) {
+			return fmt.Errorf("PR_SET_NO_NEW_PRIVS via AllThreadsSyscall is not supported in cgo-enabled binaries (compile with CGO_ENABLED=0): %w", err)
+		}
+		return fmt.Errorf("failed to set PR_SET_NO_NEW_PRIVS: %w", err)
 	}
 	return nil
 }

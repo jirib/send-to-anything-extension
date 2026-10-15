@@ -8,10 +8,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// initPrivdrop applies OpenBSD pledge.
-// Restricts the process to only stdio, file reading, and process execution.
+// initPrivdrop applies OpenBSD pledge to the host bridge process.
+// Uses PledgePromises so execpromises remains NULL, allowing child processes
+// spawned via execve to run unpledged with standard capabilities.
 func initPrivdrop() error {
-	return unix.Pledge("stdio rpath proc exec", "")
+	return unix.PledgePromises("stdio rpath proc exec")
 }
 
 // prepareSysProcAttr configures OpenBSD process attributes.

@@ -54,9 +54,10 @@ func main() {
 		return
 	}
 
-	// Initialize privilege dropping and sandboxing across runtime OS threads
+	// Initialize privilege dropping and sandboxing across runtime OS threads (fail-closed)
 	if err := initPrivdrop(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to initialize sandboxing: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Fatal: failed to initialize sandboxing: %v\n", err)
+		os.Exit(1)
 	}
 
 	if *testCmdFlag != "" {

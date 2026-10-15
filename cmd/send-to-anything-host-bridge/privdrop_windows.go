@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"sync"
 	"syscall"
@@ -12,39 +13,13 @@ import (
 )
 
 var (
-	hostJob    windows.Handle
 	jobMu      sync.Mutex
 	activeJobs = make(map[int]windows.Handle)
 )
 
-// initPrivdrop configures a Windows Job Object with KILL_ON_JOB_CLOSE for the host process.
-// If the browser or host bridge process terminates, all spawned child processes are cleanly killed.
+// initPrivdrop is a no-op at host startup on Windows.
+// Sandboxing and lifecycle constraints (KILL_ON_JOB_CLOSE) are applied per spawned command.
 func initPrivdrop() error {
-	job, err := windows.CreateJobObject(nil, nil)
-	if err != nil {
-		return err
-	}
-
-	info := windows.JOBOBJECT_EXTENDED_LIMIT_INFORMATION{
-		BasicLimitInformation: windows.JOBOBJECT_BASIC_LIMIT_INFORMATION{
-			LimitFlags: windows.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
-		},
-	}
-
-	_, err = windows.SetInformationJobObject(
-		job,
-		windows.JobObjectExtendedLimitInformation,
-		uintptr(unsafe.Pointer(&info)),
-		uint32(unsafe.Sizeof(info)),
-	)
-	if err != nil {
-		_ = windows.CloseHandle(job)
-		return err
-	}
-
-	// Try assigning host process to this job so child processes inherit it
-	_ = windows.AssignProcessToJobObject(job, windows.CurrentProcess())
-	hostJob = job
 	return nil
 }
 
@@ -58,24 +33,19 @@ func prepareSysProcAttr() *syscall.SysProcAttr {
 	}
 }
 
-// afterProcessStart associates a newly spawned process with a Job Object to ensure
-// clean lifecycle termination and group-kill capabilities on timeout.
+// afterProcessStart associates a newly spawned process with a dedicated Job Object.
+// Setting JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE ensures:
+// 1. If the host bridge terminates (e.g. browser closes or crashes), Windows automatically
+//    terminates the child process and any descendants when the job handle closes.
+// 2. On command timeout, TerminateJobObject terminates the entire process tree.
 func afterProcessStart(pid int) {
 	if pid <= 0 {
 		return
 	}
 
-	// First, if hostJob is available, assign child to hostJob for global cleanup on exit
-	if hostJob != 0 {
-		if hProcess, err := windows.OpenProcess(windows.PROCESS_SET_QUOTA|windows.PROCESS_TERMINATE, false, uint32(pid)); err == nil {
-			_ = windows.AssignProcessToJobObject(hostJob, hProcess)
-			_ = windows.CloseHandle(hProcess)
-		}
-	}
-
-	// Also create a dedicated Job Object for this command so killProcessGroup can kill its entire tree
 	job, err := windows.CreateJobObject(nil, nil)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to create Windows Job Object for process %d: %v\n", pid, err)
 		return
 	}
 
@@ -93,18 +63,21 @@ func afterProcessStart(pid int) {
 	)
 	if err != nil {
 		_ = windows.CloseHandle(job)
+		fmt.Fprintf(os.Stderr, "Warning: failed to set Job Object limits for process %d: %v\n", pid, err)
 		return
 	}
 
 	hProcess, err := windows.OpenProcess(windows.PROCESS_SET_QUOTA|windows.PROCESS_TERMINATE, false, uint32(pid))
 	if err != nil {
 		_ = windows.CloseHandle(job)
+		fmt.Fprintf(os.Stderr, "Warning: failed to open process %d for Job Object assignment: %v\n", pid, err)
 		return
 	}
 	defer windows.CloseHandle(hProcess)
 
 	if err := windows.AssignProcessToJobObject(job, hProcess); err != nil {
 		_ = windows.CloseHandle(job)
+		fmt.Fprintf(os.Stderr, "Warning: failed to assign process %d to Job Object: %v\n", pid, err)
 		return
 	}
 

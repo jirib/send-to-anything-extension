@@ -71,7 +71,7 @@ flowchart TD
 - **Multi-OS Privilege Dropping (`privdrop`) & Security**:
   - **Linux**: Sets `PR_SET_NO_NEW_PRIVS` across all Go threads so child processes cannot escalate privileges; uses `PR_SET_PDEATHSIG` (`SIGKILL`) so background processes terminate immediately when the browser closes; enforces process group isolation.
   - **Windows**: Uses Windows Job Objects with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` so child and grandchild processes are automatically terminated when the host bridge or browser exits (preventing zombie processes); enforces `CREATE_NO_WINDOW` and `HideWindow` so command windows never flicker on screen; provides full process tree termination on timeout via `TerminateJobObject`.
-  - **OpenBSD**: Implements `pledge(2)` (`stdio rpath proc exec`) and `unveil(2)` restrictions.
+  - **OpenBSD**: Implements `pledge(2)` (`stdio rpath proc exec`) on the host bridge while allowing spawned child processes to execute with standard user privileges.
   - **No Shell Wrapper**: Direct process execution without `/bin/sh -c`, preventing command and shell injection.
   - **Safe Stdio Streaming**: Passes untrusted web text via `stdin` by default.
 
@@ -89,7 +89,7 @@ flowchart TD
 │       ├── runner.go            # Safe process executor (stdin, args, timeouts)
 │       ├── privdrop_linux.go    # Linux NoNewPrivs & Pdeathsig sandboxing
 │       ├── privdrop_windows.go  # Windows Job Objects & CREATE_NO_WINDOW isolation
-│       ├── privdrop_openbsd.go  # OpenBSD pledge & unveil integration
+│       ├── privdrop_openbsd.go  # OpenBSD pledge sandboxing
 │       ├── privdrop_other.go    # Portable POSIX fallbacks
 │       ├── install.go           # Common host manifest installer dispatcher
 │       ├── install_unix.go      # Linux, macOS, BSD directory-based installer
