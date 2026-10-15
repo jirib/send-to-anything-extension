@@ -398,9 +398,21 @@
         </div>
 
         <div class="form-group">
-          <label>Register Host Bridge in browser (run in terminal):</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="margin-bottom: 0;">Register Host Bridge in browser (run in terminal):</label>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <span style="font-size: 11px; color: var(--text-muted);">Browser:</span>
+              <select id="browserSelect" style="width: auto; padding: 2px 8px; font-size: 12px; height: 26px; border-radius: 4px; background: #020617;">
+                <option value="chromium">Chromium</option>
+                <option value="chrome">Google Chrome</option>
+                <option value="brave">Brave</option>
+                <option value="edge">Microsoft Edge</option>
+                <option value="all">All Browsers</option>
+              </select>
+            </div>
+          </div>
           <div class="code-box">
-            <span id="installCmdText">send-to-anything-host-bridge -install</span>
+            <span id="installCmdText">send-to-anything-host-bridge -install -browser chromium -extension-id &lt;ID&gt;</span>
             <button id="copyInstallCmdBtn">Copy Command</button>
           </div>
         </div>

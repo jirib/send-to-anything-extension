@@ -91,16 +91,77 @@ const DEFAULT_PROFILES = [
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
-  setupHostInfo();
+  await setupHostInfo();
   await loadProfiles();
   setupEventListeners();
 });
 
-function setupHostInfo() {
+async function detectBrowser() {
+  // 1. Brave detection
+  if (navigator.brave && typeof navigator.brave.isBrave === 'function') {
+    try {
+      if (await navigator.brave.isBrave()) {
+        return 'brave';
+      }
+    } catch (e) {}
+  }
+
+  // 2. UserAgentData brand detection
+  if (navigator.userAgentData && Array.isArray(navigator.userAgentData.brands)) {
+    const brands = navigator.userAgentData.brands.map(b => (b.brand || '').toLowerCase());
+    if (brands.some(b => b.includes('microsoft edge') || b.includes('edge'))) {
+      return 'edge';
+    }
+    if (brands.some(b => b.includes('brave'))) {
+      return 'brave';
+    }
+    if (brands.some(b => b.includes('google chrome'))) {
+      return 'chrome';
+    }
+    if (brands.some(b => b.includes('chromium'))) {
+      return 'chromium';
+    }
+  }
+
+  // 3. UserAgent fallback parsing
+  const ua = (navigator.userAgent || '').toLowerCase();
+  if (ua.includes('edg/')) {
+    return 'edge';
+  }
+  if (ua.includes('brave')) {
+    return 'brave';
+  }
+  if (ua.includes('chrome')) {
+    if (navigator.vendor && navigator.vendor.includes('Google') && !ua.includes('chromium')) {
+      return 'chrome';
+    }
+    return 'chromium';
+  }
+
+  return 'chromium';
+}
+
+async function setupHostInfo() {
   const extId = chrome.runtime.id || 'YOUR_EXTENSION_ID';
   document.getElementById('extensionIdText').textContent = extId;
-  const installCmd = `send-to-anything-host-bridge -install -extension-id ${extId}`;
-  document.getElementById('installCmdText').textContent = installCmd;
+
+  const detectedBrowser = await detectBrowser();
+  const browserSelect = document.getElementById('browserSelect');
+  if (browserSelect) {
+    browserSelect.value = detectedBrowser;
+  }
+
+  function updateInstallCommand() {
+    const targetBrowser = browserSelect ? browserSelect.value : detectedBrowser;
+    const installCmd = `send-to-anything-host-bridge -install -browser ${targetBrowser} -extension-id ${extId}`;
+    document.getElementById('installCmdText').textContent = installCmd;
+  }
+
+  updateInstallCommand();
+
+  if (browserSelect) {
+    browserSelect.addEventListener('change', updateInstallCommand);
+  }
 
   document.getElementById('copyExtIdBtn').addEventListener('click', () => {
     navigator.clipboard.writeText(extId);
@@ -108,7 +169,8 @@ function setupHostInfo() {
   });
 
   document.getElementById('copyInstallCmdBtn').addEventListener('click', () => {
-    navigator.clipboard.writeText(installCmd);
+    const cmdText = document.getElementById('installCmdText').textContent;
+    navigator.clipboard.writeText(cmdText);
     flashButton(document.getElementById('copyInstallCmdBtn'), 'Copied!');
   });
 }
@@ -501,7 +563,7 @@ function testHostConnection() {
         <div style="margin-top: 6px; font-size: 12px; color: #fecaca;">
           ${chrome.runtime.lastError.message}<br>
           Run <code>send-to-anything-host-bridge -install</code> in your terminal if you want to use local CLI commands.
-        </div>
+        </div>`;
       return;
     }
 
