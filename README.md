@@ -131,17 +131,31 @@ mise run test
 5. Copy the generated **Extension ID** (e.g. `nfcfiojgldklhcnpnafndhhbpmkaeofa`).
 
 ### 3. Register the Native Messaging Host Bridge
-Register the host manifest so Chromium allows communication with your local Go binary:
+Register the host manifest so Chromium allows communication with your local Go binary.
 
+**Linux / macOS / BSD** (writes to browser config directory):
 ```bash
 # Register for Chromium (default)
 send-to-anything-host-bridge -install -extension-id <YOUR_EXTENSION_ID>
 
-# Or for Google Chrome
+# Or for Google Chrome / Brave / Edge / All
 send-to-anything-host-bridge -install -browser chrome -extension-id <YOUR_EXTENSION_ID>
-
-# Or for Brave
 send-to-anything-host-bridge -install -browser brave -extension-id <YOUR_EXTENSION_ID>
+send-to-anything-host-bridge -install -browser edge -extension-id <YOUR_EXTENSION_ID>
+send-to-anything-host-bridge -install -browser all -extension-id <YOUR_EXTENSION_ID>
+
+# To unregister:
+send-to-anything-host-bridge -uninstall -browser chromium
+```
+
+**Windows** (automatically manages `HKCU\Software\...\NativeMessagingHosts` registry keys and AppData manifest without needing administrator rights):
+```cmd
+:: Register for Chrome / Edge / Brave / Chromium / All
+send-to-anything-host-bridge.exe -install -browser chrome -extension-id <YOUR_EXTENSION_ID>
+send-to-anything-host-bridge.exe -install -browser all -extension-id <YOUR_EXTENSION_ID>
+
+:: To unregister:
+send-to-anything-host-bridge.exe -uninstall -browser all
 ```
 
 ### 4. Verify & Configure

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/binary"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -263,7 +264,24 @@ func TestGetHostTargetDirs(t *testing.T) {
 	if len(dirs) != 1 {
 		t.Fatalf("Expected 1 dir, got %d", len(dirs))
 	}
-	if !strings.Contains(dirs[0], "chromium") {
+	if runtime.GOOS != "windows" && !strings.Contains(dirs[0], "chromium") {
 		t.Errorf("Expected chromium in path, got: %s", dirs[0])
+	}
+}
+
+func TestGetHostTargetDirs_All(t *testing.T) {
+	dirs, err := GetHostTargetDirs("all")
+	if err != nil {
+		t.Fatalf("GetHostTargetDirs('all') failed: %v", err)
+	}
+	if runtime.GOOS != "windows" && len(dirs) < 4 {
+		t.Fatalf("Expected at least 4 dirs for 'all', got %d", len(dirs))
+	}
+}
+
+func TestGetHostTargetDirs_Invalid(t *testing.T) {
+	_, err := GetHostTargetDirs("invalid_browser_name")
+	if err == nil && runtime.GOOS != "windows" {
+		t.Error("Expected error for invalid browser, got nil")
 	}
 }

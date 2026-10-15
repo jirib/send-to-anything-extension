@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 )
 
@@ -78,69 +77,9 @@ func ResolveExecutablePath(binaryPath string) (string, error) {
 	return absBin, nil
 }
 
-// GetHostTargetDirs returns candidate NativeMessagingHosts directory paths for the specified browser(s).
-func GetHostTargetDirs(browser string) ([]string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("could not determine user home directory: %w", err)
-	}
-
-	b := strings.ToLower(strings.TrimSpace(browser))
-	if b == "" {
-		b = "chromium"
-	}
-
-	var dirs []string
-	switch runtime.GOOS {
-	case "linux", "openbsd", "freebsd":
-		dirMap := map[string]string{
-			"chromium": filepath.Join(home, ".config", "chromium", "NativeMessagingHosts"),
-			"chrome":   filepath.Join(home, ".config", "google-chrome", "NativeMessagingHosts"),
-			"brave":    filepath.Join(home, ".config", "BraveSoftware", "Brave-Browser", "NativeMessagingHosts"),
-			"edge":     filepath.Join(home, ".config", "microsoft-edge", "NativeMessagingHosts"),
-		}
-		if b == "all" {
-			for _, d := range dirMap {
-				dirs = append(dirs, d)
-			}
-		} else if d, exists := dirMap[b]; exists {
-			dirs = append(dirs, d)
-		} else {
-			return nil, fmt.Errorf("unsupported browser '%s' on %s (supported: chromium, chrome, brave, edge, all)", browser, runtime.GOOS)
-		}
-
-	case "darwin":
-		dirMap := map[string]string{
-			"chromium": filepath.Join(home, "Library", "Application Support", "Chromium", "NativeMessagingHosts"),
-			"chrome":   filepath.Join(home, "Library", "Application Support", "Google", "Chrome", "NativeMessagingHosts"),
-			"brave":    filepath.Join(home, "Library", "Application Support", "BraveSoftware", "Brave-Browser", "NativeMessagingHosts"),
-			"edge":     filepath.Join(home, "Library", "Application Support", "Microsoft Edge", "NativeMessagingHosts"),
-		}
-		if b == "all" {
-			for _, d := range dirMap {
-				dirs = append(dirs, d)
-			}
-		} else if d, exists := dirMap[b]; exists {
-			dirs = append(dirs, d)
-		} else {
-			return nil, fmt.Errorf("unsupported browser '%s' on macOS", browser)
-		}
-
-	default:
-		return nil, fmt.Errorf("automatic manifest registration not supported on %s", runtime.GOOS)
-	}
-
-	return dirs, nil
-}
-
 // InstallManifest registers the Native Messaging manifest for the given browser and extension IDs.
 func InstallManifest(browser, binaryPath string, extensionIDs []string) error {
 	absBin, err := ResolveExecutablePath(binaryPath)
-	if err != nil {
-		return err
-	}
-
-	dirs, err := GetHostTargetDirs(browser)
 	if err != nil {
 		return err
 	}
@@ -157,29 +96,9 @@ func InstallManifest(browser, binaryPath string, extensionIDs []string) error {
 		}
 	}
 
-	// If no extension IDs provided, try preserving existing allowed_origins from existing manifest
+	// If no extension IDs provided, try preserving existing allowed_origins
 	if len(allowedOrigins) == 0 {
-		for _, dir := range dirs {
-			for _, candidate := range []string{HostName, LegacyHostName} {
-				candidatePath := filepath.Join(dir, candidate+".json")
-				if data, err := os.ReadFile(candidatePath); err == nil {
-					var existing HostManifest
-					if err := json.Unmarshal(data, &existing); err == nil && len(existing.AllowedOrigins) > 0 {
-						for _, orig := range existing.AllowedOrigins {
-							if !strings.Contains(orig, "YOUR_EXTENSION_ID_HERE") {
-								allowedOrigins = append(allowedOrigins, orig)
-							}
-						}
-					}
-				}
-				if len(allowedOrigins) > 0 {
-					break
-				}
-			}
-			if len(allowedOrigins) > 0 {
-				break
-			}
-		}
+		allowedOrigins = getExistingAllowedOrigins(browser)
 	}
 
 	if len(allowedOrigins) == 0 {
@@ -200,44 +119,10 @@ func InstallManifest(browser, binaryPath string, extensionIDs []string) error {
 		return fmt.Errorf("failed to marshal manifest json: %w", err)
 	}
 
-	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", dir, err)
-		}
-
-		// Clean up legacy manifest if present
-		legacyPath := filepath.Join(dir, LegacyHostName+".json")
-		if _, err := os.Stat(legacyPath); err == nil {
-			_ = os.Remove(legacyPath)
-		}
-
-		destPath := filepath.Join(dir, HostName+".json")
-		if err := os.WriteFile(destPath, manifestData, 0644); err != nil {
-			return fmt.Errorf("failed to write manifest to %s: %w", destPath, err)
-		}
-		fmt.Printf("✓ Registered Native Messaging Host at: %s\n", destPath)
-	}
-
-	return nil
+	return installPlatform(browser, manifest, manifestData)
 }
 
-// UninstallManifest removes registered manifest files.
+// UninstallManifest removes registered manifest files and registry entries.
 func UninstallManifest(browser string) error {
-	dirs, err := GetHostTargetDirs(browser)
-	if err != nil {
-		return err
-	}
-
-	for _, dir := range dirs {
-		for _, name := range []string{HostName, LegacyHostName} {
-			manifestPath := filepath.Join(dir, name+".json")
-			if _, err := os.Stat(manifestPath); err == nil {
-				if err := os.Remove(manifestPath); err != nil {
-					return fmt.Errorf("failed to remove %s: %w", manifestPath, err)
-				}
-				fmt.Printf("✓ Removed Native Messaging Host manifest from: %s\n", manifestPath)
-			}
-		}
-	}
-	return nil
+	return uninstallPlatform(browser)
 }
