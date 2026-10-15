@@ -1,0 +1,18 @@
+[tools]
+go = "1.27.2"
+
+[tasks.build]
+description = "Build send-to-anything-host-bridge binary"
+run = "go build -ldflags=\"-s -w\" -o bin/send-to-anything-host-bridge ./cmd/send-to-anything-host-bridge"
+
+[tasks.install]
+description = "Install send-to-anything-host-bridge into GOBIN / PATH"
+run = "go install ./cmd/send-to-anything-host-bridge"
+
+[tasks.test]
+description = "Run all Go tests"
+run = "go test -v ./..."
+
+[tasks.clean]
+description = "Remove build artifacts"
+run = "rm -rf bin/"

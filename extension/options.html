@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Send-to-anything Settings</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --success: #10b981;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 32px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 920px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      background: #334155;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-top: 0;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .profile-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .profile-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      transition: border-color 0.2s;
+    }
+
+    .profile-item:hover {
+      border-color: #475569;
+    }
+
+    .profile-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .profile-header-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .profile-name {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .profile-command {
+      font-family: monospace;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #1e293b;
+      color: #38bdf8;
+    }
+
+    .profile-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .profile-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    button {
+      background: var(--card-border);
+      color: var(--text);
+      border: none;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    button:hover {
+      background: #475569;
+    }
+
+    button.primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    button.primary:hover {
+      background: var(--primary-hover);
+    }
+
+    button.danger {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    button.danger:hover {
+      background: var(--danger);
+      color: white;
+    }
+
+    /* Modal / Form */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 28px;
+      width: 620px;
+      max-width: 90vw;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: #cbd5e1;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .help-text {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .row {
+      display: flex;
+      gap: 16px;
+    }
+
+    .row > .form-group {
+      flex: 1;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    /* Setup Guide */
+    .code-box {
+      background: #020617;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-family: "JetBrains Mono", Menlo, monospace;
+      font-size: 13px;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-weight: 500;
+    }
+
+    .status-ok { background: #064e3b; color: #a7f3d0; }
+    .status-err { background: #450a0a; color: #fecaca; }
+
+    /* Backend & Plugin Cards */
+    .backend-section {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 18px;
+      margin-top: 14px;
+    }
+
+    .backend-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .backend-title {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      flex: 1;
+      min-width: 250px;
+    }
+
+    .backend-icon {
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .backend-name {
+      font-weight: 600;
+      font-size: 15px;
+      color: #f8fafc;
+    }
+
+    .backend-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    .plugins-category-title {
+      margin-top: 24px;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Test Console */
+    .console-output {
+      background: #020617;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 150px;
+      overflow-y: auto;
+      margin-top: 10px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>⚡ Send-to-anything Settings <span class="badge">v1.0.0</span></h1>
+      <button class="primary" id="addProfileBtn">+ Add Profile</button>
+    </header>
+
+    <!-- Profiles Section -->
+    <div class="card">
+      <div class="card-title">
+        <span>Configured Profiles</span>
+        <span class="help-text">Profiles can be commands or integrated plugins, operating one-way or two-way.</span>
+      </div>
+      <div class="profile-list" id="profileList"></div>
+    </div>
+
+    <!-- Backend & Connectivity Setup Section -->
+    <div class="card">
+      <div class="card-title">
+        <span>Backend & Connectivity Setup</span>
+        <span class="help-text">Configure and verify execution engines used by your profiles.</span>
+      </div>
+
+      <!-- 1. Host Bridge (First) -->
+      <div class="backend-section">
+        <div class="backend-header">
+          <div class="backend-title">
+            <span class="backend-icon">💻</span>
+            <div>
+              <div class="backend-name">Host Bridge: <code>send-to-anything-host-bridge</code></div>
+              <div class="backend-desc">
+                Executes local binaries, CLI commands, or shell pipelines (e.g. <code>jq</code>, <code>tee</code>, custom scripts) via the compiled Go native messaging host bridge.
+              </div>
+            </div>
+          </div>
+          <button id="testHostBtn">Test Host Bridge</button>
+        </div>
+
+        <div class="form-group" style="margin-top: 14px;">
+          <label>Your Extension ID:</label>
+          <div class="code-box">
+            <span id="extensionIdText">Loading...</span>
+            <button id="copyExtIdBtn">Copy ID</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Register Host Bridge in browser (run in terminal):</label>
+          <div class="code-box">
+            <span id="installCmdText">send-to-anything-host-bridge -install</span>
+            <button id="copyInstallCmdBtn">Copy Command</button>
+          </div>
+        </div>
+
+        <!-- Scoped Status Result for Host Bridge -->
+        <div id="hostStatusResult" style="margin-top: 12px; display: none;"></div>
+      </div>
+
+      <!-- 2. Web Plugins Area (Per Plugin) -->
+      <div class="plugins-category-title">Web Plugins</div>
+
+      <!-- Plugin: Google Gemini Web -->
+      <div class="backend-section">
+        <div class="backend-header">
+          <div class="backend-title">
+            <span class="backend-icon">🌐</span>
+            <div>
+              <div class="backend-name">Plugin: Google Gemini Web (<code style="color: var(--primary); font-size: 13px;">gemini_web</code>)</div>
+              <div class="backend-desc">
+                Automates <a href="https://gemini.google.com/app" target="_blank" style="color:var(--primary);">gemini.google.com/app</a> using your existing active browser session with zero API keys or external dependencies.
+              </div>
+            </div>
+          </div>
+          <button id="testGeminiWebBtn">Test Gemini Web Session</button>
+        </div>
+
+        <!-- Scoped Status Result for Gemini Web Plugin -->
+        <div id="geminiWebStatusResult" style="margin-top: 12px; display: none;"></div>
+      </div>
+    </div>
+
+    <!-- Live Test Section -->
+    <div class="card">
+      <div class="card-title">
+        <span>Quick Profile Tester</span>
+        <button class="primary" id="runTestBtn">Run Test</button>
+      </div>
+      <div class="row">
+        <div class="form-group">
+          <label for="testProfileSelect">Select Profile to Test:</label>
+          <select id="testProfileSelect"></select>
+        </div>
+        <div class="form-group">
+          <label for="testInputText">Sample Text:</label>
+          <input type="text" id="testInputText" value="The quick brown fox jumps over the lazy dog.">
+        </div>
+      </div>
+      <div class="console-output" id="testConsole">Output will appear here...</div>
+    </div>
+  </div>
+
+  <!-- Profile Edit Modal -->
+  <div class="modal-overlay" id="profileModal">
+    <div class="modal">
+      <h2 id="modalTitle" style="margin-top: 0; font-size: 18px;">Edit Profile</h2>
+      <input type="hidden" id="editProfileId">
+
+      <div class="form-group">
+        <label for="fieldName">Profile Name:</label>
+        <input type="text" id="fieldName" placeholder="e.g., Gemini Rewrite, JQ Filter, Append to Notes">
+      </div>
+
+      <div class="row">
+        <div class="form-group">
+          <label for="fieldBackendType">Engine / Backend:</label>
+          <select id="fieldBackendType">
+            <option value="plugin_gemini_web">Plugin: Google Gemini Web (Browser Session)</option>
+            <option value="command">Host Bridge: Local Command / Script</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="fieldExpectsReturn">Workflow (Return Data):</label>
+          <select id="fieldExpectsReturn">
+            <option value="true">Two-way (Wait for result and output)</option>
+            <option value="false">One-way (Send only / Fire-and-forget)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Two-way output configurations -->
+      <div id="twoWayGroup">
+        <div class="row">
+          <div class="form-group">
+            <label for="fieldOutputMode">Output Action:</label>
+            <select id="fieldOutputMode">
+              <option value="replace">Replace in-place (Form / Editable)</option>
+              <option value="panel">Floating Panel (Sidecar & Fullscreen)</option>
+              <option value="clipboard">Copy to Clipboard</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="fieldReturnFormat">Return Data Format:</label>
+            <select id="fieldReturnFormat">
+              <option value="plain">Plain (As-is output)</option>
+              <option value="custom">Custom Format Template</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" id="formatTemplateGroup" style="display:none;">
+          <label for="fieldFormatTemplate">Output Format Template:</label>
+          <input type="text" id="fieldFormatTemplate" placeholder="e.g. /* Generated */\n{{output}} or > {{output}}">
+          <div class="help-text">Use {{output}} where the returned content will be placed.</div>
+        </div>
+      </div>
+
+      <!-- Plugin fields -->
+      <div id="geminiWebFields">
+        <div class="form-group">
+          <label for="fieldInstruction">Rewriting Instruction / Prompt:</label>
+          <textarea id="fieldInstruction" rows="4" placeholder="e.g. Rewrite the following text concisely and professionally:&#10;&#10;%%actual_text%%&#10;&#10;Return ONLY the rewritten text."></textarea>
+          <div class="help-text">Use <code>%%actual_text%%</code> where the input text will be placed. If omitted, the text is appended automatically.</div>
+        </div>
+      </div>
+
+      <!-- Host Bridge fields -->
+      <div id="cliFields">
+        <div class="row">
+          <div class="form-group">
+            <label for="fieldCommand">Command / Binary:</label>
+            <input type="text" id="fieldCommand" placeholder="e.g. jq, /usr/local/bin/my-tool, tee -a ~/notes.txt">
+          </div>
+
+          <div class="form-group">
+            <label for="fieldInputMode">Input Delivery Mode:</label>
+            <select id="fieldInputMode">
+              <option value="stdin">Standard Input (stdin)</option>
+              <option value="arg">Command-line Argument (arg)</option>
+              <option value="both">Both stdin and argument</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" id="cliArgsGroup" style="display:none;">
+          <label for="fieldArgs">Arguments Configuration:</label>
+          <input type="text" id="fieldArgs" placeholder='e.g. -m gemini-2.5-flash --prompt "Summarize: %%actual_text%%"'>
+          <div class="help-text">Use <code>%%actual_text%%</code> or <code>{{text}}</code> where input text should be inserted. If omitted, text is appended as the last argument.</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="form-group">
+          <label for="fieldInputSource">Input Data Source:</label>
+          <select id="fieldInputSource">
+            <option value="editable">Active Form / Editable Field</option>
+            <option value="selection">Selected / Highlighted Text</option>
+            <option value="page">Entire Webpage Content</option>
+          </select>
+          <div class="help-text">If not active, you will be prompted to click one.</div>
+        </div>
+
+        <div class="form-group">
+          <label for="fieldShortcut">Shortcut Mapping:</label>
+          <select id="fieldShortcut">
+            <option value="">None (Context menu / Palette only)</option>
+            <option value="run-profile-1">Shortcut 1 (Default: Alt+Shift+E)</option>
+            <option value="run-profile-2">Shortcut 2 (Default: Alt+Shift+S)</option>
+            <option value="run-profile-3">Shortcut 3 (Default: Alt+Shift+D)</option>
+            <option value="run-profile-4">Shortcut 4 (Bind in chrome://extensions/shortcuts)</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="max-width: 140px;">
+          <label for="fieldTimeout">Timeout (s):</label>
+          <input type="number" id="fieldTimeout" min="5" max="300" value="60">
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="cancelModalBtn">Cancel</button>
+        <button class="primary" id="saveProfileBtn">Save Profile</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

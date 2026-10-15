@@ -1,0 +1,130 @@
+name: Release Host Bridge
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag name (e.g. v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: true
+
+      - name: Run Tests
+        run: go test -v ./...
+
+  release:
+    name: Build & Release
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: true
+
+      - name: Install packaging dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zip tar
+
+      - name: Build & Package Binaries
+        id: build
+        run: |
+          set -euo pipefail
+
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${TAG#v}"
+          echo "Building release assets for ${TAG} (version ${VERSION})..."
+
+          mkdir -p dist
+
+          TARGETS=(
+            "linux/amd64"
+            "linux/arm64"
+            "darwin/amd64"
+            "darwin/arm64"
+            "windows/amd64"
+            "windows/arm64"
+            "freebsd/amd64"
+            "openbsd/amd64"
+          )
+
+          for target in "${TARGETS[@]}"; do
+            GOOS="${target%/*}"
+            GOARCH="${target#*/}"
+            BIN="send-to-anything-host-bridge"
+            if [ "$GOOS" = "windows" ]; then
+              BIN="${BIN}.exe"
+            fi
+
+            echo "--> Compiling ${GOOS}/${GOARCH}..."
+            CGO_ENABLED=0 GOOS="${GOOS}" GOARCH="${GOARCH}" go build \
+              -trimpath \
+              -ldflags="-s -w -X main.Version=${VERSION}" \
+              -o "dist/${BIN}" \
+              ./cmd/send-to-anything-host-bridge
+
+            ARCHIVE="send-to-anything-host-bridge-${TAG}-${GOOS}-${GOARCH}"
+            STAGE_DIR="dist/${ARCHIVE}"
+            mkdir -p "${STAGE_DIR}"
+            mv "dist/${BIN}" "${STAGE_DIR}/"
+            cp LICENSE.md README.md "${STAGE_DIR}/"
+
+            if [ "$GOOS" = "windows" ]; then
+              (cd dist && zip -q -r "${ARCHIVE}.zip" "${ARCHIVE}")
+            else
+              tar -czf "dist/${ARCHIVE}.tar.gz" -C dist "${ARCHIVE}"
+            fi
+
+            rm -rf "${STAGE_DIR}"
+          done
+
+          # Package Chromium extension directory into a convenient zip
+          echo "--> Packaging Chromium extension bundle..."
+          (cd extension && zip -q -r "../dist/send-to-anything-extension-${TAG}.zip" .)
+
+          # Generate SHA256 checksums file
+          echo "--> Generating SHA256 checksums..."
+          (cd dist && sha256sum * > checksums.txt)
+
+          echo "--> Build complete. Assets to publish:"
+          ls -lh dist/
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            echo "Release ${TAG} already exists; uploading assets with clobber..."
+            gh release upload "${TAG}" dist/* --clobber
+          else
+            echo "Creating release ${TAG}..."
+            gh release create "${TAG}" \
+              --title "Send-to-anything ${TAG}" \
+              --generate-notes \
+              dist/*
+          fi

@@ -1,0 +1,79 @@
+{
+  "manifest_version": 3,
+  "name": "Send-to-anything",
+  "version": "1.0.0",
+  "description": "Send web text, drafts, and selections to any local command, script, or web AI plugin.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "nativeMessaging",
+    "contextMenus",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "https://gemini.google.com/*",
+    "https://bard.google.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://gemini.google.com/*",
+        "https://bard.google.com/*"
+      ],
+      "js": ["gemini_bridge.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Send-to-anything",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+P"
+      },
+      "description": "Open Send-to-anything Command Palette"
+    },
+    "run-profile-1": {
+      "suggested_key": {
+        "default": "Alt+Shift+E"
+      },
+      "description": "Execute Profile 1"
+    },
+    "run-profile-2": {
+      "suggested_key": {
+        "default": "Alt+Shift+S"
+      },
+      "description": "Execute Profile 2"
+    },
+    "run-profile-3": {
+      "suggested_key": {
+        "default": "Alt+Shift+D"
+      },
+      "description": "Execute Profile 3"
+    },
+    "run-profile-4": {
+      "description": "Execute Profile 4 (bind key in chrome://extensions/shortcuts)"
+    }
+  }
+}
